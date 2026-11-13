@@ -3,9 +3,15 @@ import { savePost } from "@/lib/posts";
 import { revalidatePath } from "next/cache";
 import OpenAI from "openai";
 
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-});
+let openai: OpenAI | null = null;
+function getOpenAI() {
+    if (!openai) {
+        const key = process.env.OPENAI_API_KEY || process.env.OPENAI_ADMIN_KEY;
+        if (!key) return null;
+        openai = new OpenAI({ apiKey: key });
+    }
+    return openai;
+}
 
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
@@ -35,7 +41,12 @@ Do not output markdown code blocks. Output exactly a JSON object in this format:
 }
         `;
 
-        const completion = await openai.chat.completions.create({
+        const client = getOpenAI();
+        if (!client) {
+            return NextResponse.json({ error: "OpenAI not configured" }, { status: 500 });
+        }
+
+        const completion = await client.chat.completions.create({
             model: "gpt-4o-mini",
             response_format: { type: "json_object" },
             messages: [
