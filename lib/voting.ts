@@ -2,6 +2,12 @@
 export async function saveVotePayment() {
     return null;
 }
+export async function getVotePayment() {
+    return null;
+}
+export async function updateVotePaymentStatus() {
+    return null;
+}
 export function getCandidateByCode() {
     return null;
 }
