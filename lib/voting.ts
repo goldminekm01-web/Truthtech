@@ -8,7 +8,7 @@ export async function getVotePayment(_id?: string) {
 export async function updateVotePaymentStatus(_id?: string, _status?: string, _receipt?: string) {
     return null;
 }
-export function getCandidateByCode() {
+export function getCandidateByCode(_code?: string) {
     return null;
 }
 export function getCandidateById() {
