@@ -3,7 +3,7 @@ export async function saveVotePayment() {
     return null;
 }
 export async function getVotePayment(_id?: string) {
-    return null;
+    return null as any;
 }
 export async function updateVotePaymentStatus(_id?: string, _status?: string, _receipt?: string) {
     return null;
