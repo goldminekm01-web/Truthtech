@@ -22,6 +22,14 @@ const config: Config = {
                     border: "#e5e7eb",
                     "dark-border": "#1f2937",
                 },
+                truth: {
+                    dark: "#0b0b0c",
+                    light: "#fafafa",
+                    accent: "#c41e3a",
+                    gray: "#0f0f10",
+                    border: "#e7e7e7",
+                    "dark-border": "#2a2a2e",
+                },
                 markets: {
                     up: "#00c47a",
                     down: "#ff3b3b",

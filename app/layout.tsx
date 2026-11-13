@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import Header from "@/components/Header";
+import TruthTechHeader from "@/components/TruthTechHeader";
 import Footer from "@/components/Footer";
 import BreakingBar from "@/components/BreakingBar";
 import MarketTicker from "@/components/MarketTicker";
@@ -10,23 +10,23 @@ import { WalletProvider } from "@/components/WalletContext";
 
 export const metadata: Metadata = {
     title: {
-        default: "Lazarus — Markets & Trading Intelligence",
-        template: "%s | Lazarus",
+        default: "TruthTech — Technology & Markets Intelligence",
+        template: "%s | TruthTech",
     },
     description:
-        "Independent market intelligence, trading analysis, and financial news for serious investors and traders.",
+        "Independent technology news, market analysis, and digital intelligence for serious readers.",
     metadataBase: new URL(
         process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"
     ),
     openGraph: {
         type: "website",
-        siteName: "Lazarus",
+        siteName: "TruthTech",
         locale: "en_US",
         images: ["/og-default.jpg"],
     },
     twitter: {
         card: "summary_large_image",
-        site: "@lazarusHQ",
+        site: "@truthtechHQ",
     },
     robots: { index: true, follow: true },
 };
@@ -43,7 +43,7 @@ export default function RootLayout({
                     <TawkWidget />
                     <VisitorTracker />
                     <BreakingBar />
-                    <Header />
+                    <TruthTechHeader />
                     <MarketTicker />
                     <main id="main-content" tabIndex={-1} className="outline-none">
                         {children}

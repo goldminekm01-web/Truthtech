@@ -1,6 +1,6 @@
 import { getAllPosts, getFeaturedPosts, getLatestPosts, getPostsByCategory } from "@/lib/posts";
 import { getAllCategories } from "@/lib/categories";
-import Hero from "@/components/Hero";
+import TruthTechHero from "@/components/TruthTechHero";
 import CategoryStrip from "@/components/CategoryStrip";
 import ArticleCard from "@/components/ArticleCard";
 import NewsletterCTA from "@/components/NewsletterCTA";
@@ -32,7 +32,7 @@ export default async function HomePage() {
         <div>
             {/* Hero */}
             <div className="max-w-8xl mx-auto px-4 sm:px-6 pt-4">
-                <Hero leadPost={leadPost} secondaryPosts={secondaryPosts} />
+                <TruthTechHero leadPost={leadPost} secondaryPosts={secondaryPosts} />
             </div>
 
             {/* Trust Signals — stats, testimonials, media mentions */}

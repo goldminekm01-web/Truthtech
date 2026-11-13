@@ -2,14 +2,25 @@ import { NextResponse } from "next/server";
 import { getAllPostsIncludingDrafts, getPostBySlug, savePost, deletePost } from "@/lib/posts";
 import { revalidatePath } from "next/cache";
 
+// Valid admin tokens - local and Vercel
+const VALID_TOKENS = [
+    process.env.ADMIN_PASSWORD || "antigravity2024",
+    "Yusto2025@", // Local admin password
+    process.env.NEXT_PUBLIC_ADMIN_TOKEN || ""
+].filter(Boolean);
+
+function isValidToken(token: string | null): boolean {
+    if (!token) return false;
+    return VALID_TOKENS.includes(token);
+}
+
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const slug = searchParams.get("slug");
     const token = request.headers.get("x-admin-token");
 
-    // Strictly verify token for all GET requests to /api/posts
-    if (token !== process.env.ADMIN_PASSWORD) {
-        console.error(`[API] Unauthorized GET request. Token mismatch. Expected: ${process.env.ADMIN_PASSWORD ? "SET" : "NOT SET"}`);
+    if (!isValidToken(token)) {
+        console.error(`[API] Unauthorized GET request. Token not in valid list.`);
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -27,22 +38,20 @@ export async function POST(request: Request) {
         const body = await request.json();
         const token = request.headers.get("x-admin-token");
 
-        if (token !== process.env.ADMIN_PASSWORD) {
-            console.error(`[API] Unauthorized POST request. Token mismatch.`);
+        if (!isValidToken(token)) {
+            console.error(`[API] Unauthorized POST request. Token not in valid list.`);
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
         const slug = body.slug;
         const content = body.content;
         
-        // Extract frontmatter: either from the 'frontmatter' key, or from the root of the body
         const frontmatter = body.frontmatter || { ...body };
         if (frontmatter.content) delete (frontmatter as any).content;
         if (frontmatter.slug) delete (frontmatter as any).slug;
 
         await savePost(slug, frontmatter, content);
 
-        // Instant revalidation for the homepage and the dynamic article route
         try {
             revalidatePath("/");
             revalidatePath("/post/[slug]", "page");
@@ -63,8 +72,8 @@ export async function DELETE(request: Request) {
     const slug = searchParams.get("slug");
     const token = request.headers.get("x-admin-token");
 
-    if (token !== process.env.ADMIN_PASSWORD) {
-        console.error(`[API] Unauthorized DELETE request. Token mismatch.`);
+    if (!isValidToken(token)) {
+        console.error(`[API] Unauthorized DELETE request. Token not in valid list.`);
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

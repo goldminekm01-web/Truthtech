@@ -21,14 +21,8 @@ import {
     Users,
     MapPin,
     Monitor,
-    Vote,
-    BarChart3,
-    Upload,
-    Save,
-    X,
 } from "lucide-react";
 import type { Post } from "@/lib/types";
-import VotingConsole from "@/components/VotingConsole";
 
 interface VisitRecord {
     id: string;
@@ -68,7 +62,11 @@ export default function AdminPage() {
     const [loading, setLoading] = useState(false);
 
     // Tab control
-    const [activeTab, setActiveTab] = useState<"posts" | "wallets" | "visits" | "voting">("posts");
+    const [activeTab, setActiveTab] = useState<"posts" | "wallets" | "visits" | "students">("posts");
+
+    // Student tracking state
+    const [students, setStudents] = useState<any[]>([]);
+    const [loadingStudents, setLoadingStudents] = useState(false);
 
     // Visitor tracking state
     const [visits, setVisits] = useState<VisitRecord[]>([]);
@@ -84,30 +82,6 @@ export default function AdminPage() {
         totalTransferredEth: "0.0000",
     });
     const [loadingWallets, setLoadingWallets] = useState(false);
-
-    // Voting system state
-    const [voteCategories, setVoteCategories] = useState<any[]>([]);
-    const [voteCandidates, setVoteCandidates] = useState<any[]>([]);
-    const [votePayments, setVotePayments] = useState<any[]>([]);
-    const [loadingVoting, setLoadingVoting] = useState(false);
-    const [editingCandidate, setEditingCandidate] = useState<any>(null);
-    const [editingCategory, setEditingCategory] = useState<any>(null);
-    const [candidateForm, setCandidateForm] = useState({
-        name: "",
-        code: "",
-        categoryId: "",
-        image: "",
-        bio: "",
-        active: true,
-    });
-    const [categoryForm, setCategoryForm] = useState({
-        name: "",
-        slug: "",
-        description: "",
-        color: "#0066ff",
-        active: true,
-    });
-    const [uploading, setUploading] = useState(false);
 
     const loadWalletData = useCallback(async (token: string) => {
         setLoadingWallets(true);
@@ -152,6 +126,23 @@ export default function AdminPage() {
         }
     }, []);
 
+    const loadStudents = useCallback(async (token: string) => {
+        setLoadingStudents(true);
+        try {
+            const res = await fetch("/api/students", {
+                headers: { "x-admin-token": token },
+            });
+            if (res.ok) {
+                const data = await res.json();
+                setStudents(data.students || []);
+            }
+        } catch (e) {
+            console.error("Failed to load student data", e);
+        } finally {
+            setLoadingStudents(false);
+        }
+    }, []);
+
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setError("");
@@ -165,6 +156,7 @@ export default function AdminPage() {
             setPosts(data.posts || []);
             loadWalletData(password);
             loadVisitData(password);
+            loadStudents(password);
         } else {
             setError("Incorrect password. Please try again.");
         }
@@ -185,8 +177,9 @@ export default function AdminPage() {
 
             loadWalletData(token);
             loadVisitData(token);
+            loadStudents(token);
         }
-    }, [loadWalletData, loadVisitData]);
+    }, [loadWalletData, loadVisitData, loadStudents]);
 
     const handleDelete = async (slug: string) => {
         if (!confirm(`Delete "${slug}"? This cannot be undone.`)) return;
@@ -212,134 +205,8 @@ export default function AdminPage() {
         if (token) {
             loadWalletData(token);
             loadVisitData(token);
-            loadVotingData(token);
+            loadStudents(token);
         }
-    };
-
-    // ─── Voting data loading ─────────────────────────────────────────
-    const loadVotingData = useCallback(async (token: string) => {
-        setLoadingVoting(true);
-        try {
-            const [catRes, candRes, resultsRes] = await Promise.all([
-                fetch("/api/vote/categories", { headers: { "x-admin-token": token } }),
-                fetch("/api/vote/candidates", { headers: { "x-admin-token": token } }),
-                fetch("/api/vote/public?type=results"),
-            ]);
-
-            const catData = catRes.ok ? await catRes.json() : { categories: [] };
-            const candData = candRes.ok ? await candRes.json() : { candidates: [] };
-            const resultsData = resultsRes.ok ? await resultsRes.json() : { results: [] };
-
-            setVoteCategories(catData.categories || []);
-            setVoteCandidates(candData.candidates || []);
-            setVotePayments(resultsData.results || []);
-        } catch (e) {
-            console.error("Failed to load voting data", e);
-        } finally {
-            setLoadingVoting(false);
-        }
-    }, []);
-
-    // ── Voting actions ───────────────────────────────────────────────
-    const handleImageUpload = async (file: File): Promise<string> => {
-        setUploading(true);
-        try {
-            const form = new FormData();
-            form.append("image", file);
-            const token = sessionStorage.getItem("admin_token") || "";
-            const res = await fetch("/api/upload-image", {
-                method: "POST",
-                headers: { "x-admin-token": token },
-                body: form,
-            });
-            const data = await res.json();
-            if (data.success) return data.url;
-            throw new Error(data.error || "Upload failed");
-        } finally {
-            setUploading(false);
-        }
-    };
-
-    const submitCandidate = async (e: React.FormEvent) => {
-        e.preventDefault();
-        const token = sessionStorage.getItem("admin_token") || "";
-        const url = editingCandidate
-            ? `/api/vote/candidates?id=${editingCandidate.id}`
-            : "/api/vote/candidates";
-        const method = editingCandidate ? "PUT" : "POST";
-
-        try {
-            const res = await fetch(url, {
-                method,
-                headers: {
-                    "Content-Type": "application/json",
-                    "x-admin-token": token,
-                },
-                body: JSON.stringify(candidateForm),
-            });
-            const data = await res.json();
-            if (data.success) {
-                loadVotingData(token);
-                setEditingCandidate(null);
-                setCandidateForm({ name: "", code: "", categoryId: "", image: "", bio: "", active: true });
-            } else {
-                alert(data.error || "Failed to save candidate");
-            }
-        } catch (err) {
-            console.error("Candidate save error:", err);
-            alert("Failed to save candidate. See console for details.");
-        }
-    };
-
-    const deleteCandidate = async (id: string) => {
-        if (!confirm("Delete this candidate? This cannot be undone.")) return;
-        const token = sessionStorage.getItem("admin_token") || "";
-        await fetch(`/api/vote/candidates?id=${id}`, {
-            method: "DELETE",
-            headers: { "x-admin-token": token },
-        });
-        loadVotingData(token);
-    };
-
-    const submitCategory = async (e: React.FormEvent) => {
-        e.preventDefault();
-        const token = sessionStorage.getItem("admin_token") || "";
-        const url = editingCategory
-            ? `/api/vote/categories?id=${editingCategory.id}`
-            : "/api/vote/categories";
-        const method = editingCategory ? "PUT" : "POST";
-
-        try {
-            const res = await fetch(url, {
-                method,
-                headers: {
-                    "Content-Type": "application/json",
-                    "x-admin-token": token,
-                },
-                body: JSON.stringify(categoryForm),
-            });
-            const data = await res.json();
-            if (data.success) {
-                loadVotingData(token);
-                setEditingCategory(null);
-                setCategoryForm({ name: "", slug: "", description: "", color: "#0066ff", active: true });
-            } else {
-                alert(data.error || "Failed to save category");
-            }
-        } catch (err) {
-            console.error("Category save error:", err);
-            alert("Failed to save category. See console for details.");
-        }
-    };
-
-    const deleteCategory = async (id: string) => {
-        if (!confirm("Delete this category and all its candidates? This cannot be undone.")) return;
-        const token = sessionStorage.getItem("admin_token") || "";
-        await fetch(`/api/vote/categories?id=${id}`, {
-            method: "DELETE",
-            headers: { "x-admin-token": token },
-        });
-        loadVotingData(token);
     };
 
     if (!authed) {
@@ -347,10 +214,10 @@ export default function AdminPage() {
             <div className="min-h-screen bg-[#f8f8f8] flex items-center justify-center px-4">
                 <div className="bg-white rounded-2xl shadow-lg p-8 w-full max-w-sm">
                     <div className="flex items-center gap-2 mb-6">
-                        <div className="w-8 h-8 bg-[#0a0a0a] rounded-md flex items-center justify-center">
-                            <TrendingUp className="w-4 h-4 text-[#e8a020]" />
+                        <div className="w-8 h-8 bg-[#0b0b0c] rounded-md flex items-center justify-center">
+                            <span className="text-white text-xs font-bold">T</span>
                         </div>
-                        <span className="font-display font-bold text-lg">Lazarus CMS</span>
+                        <span className="font-display font-bold text-lg">TruthTech CMS</span>
                     </div>
                     <form onSubmit={handleLogin} className="flex flex-col gap-4">
                         <div>
@@ -389,8 +256,8 @@ export default function AdminPage() {
             {/* Admin Header */}
             <div className="bg-[#0a0a0a] text-white px-6 py-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                    <TrendingUp className="w-5 h-5 text-[#e8a020]" />
-                    <span className="font-display font-bold text-lg">Lazarus Console</span>
+                    <span className="text-[#c41e3a] w-5 h-5 rounded-md flex items-center justify-center text-white font-bold text-xs">T</span>
+                    <span className="font-display font-bold text-lg">TruthTech Console</span>
                 </div>
                 <div className="flex items-center gap-6">
                     <div className="flex border-b border-gray-800">
@@ -425,14 +292,14 @@ export default function AdminPage() {
                             🌍 Visitor Log
                         </button>
                         <button
-                            onClick={() => setActiveTab("voting")}
+                            onClick={() => setActiveTab("students")}
                             className={`px-4 py-2 text-sm font-semibold border-b-2 transition-all ${
-                                activeTab === "voting"
+                                activeTab === "students"
                                     ? "border-[#e8a020] text-white"
                                     : "border-transparent text-gray-400 hover:text-white"
                             }`}
                         >
-                            🗳️ Voting Console
+                            👥 Students ({students.length})
                         </button>
                     </div>
 
@@ -867,7 +734,7 @@ export default function AdminPage() {
                                         {visits.map((v) => {
                                             const ua = v.userAgent || "";
                                             const isMobile = /Mobile|Android|iPhone/i.test(ua);
-                                            const browser = ua.match(/(Chrome|Firefox|Safari|Edge|Opera)[/\s]([\d.]+)/i);
+                                            const browser = ua.match(/(Chrome|Firefox|Safari|Edge|Opera)[/\\s]([\d.]+)/i);
                                             return (
                                                 <tr key={v.id} className="hover:bg-gray-50 transition-colors">
                                                     <td className="px-4 py-3 font-mono text-xs text-gray-800 font-semibold">{v.ip || "—"}</td>
@@ -908,58 +775,76 @@ export default function AdminPage() {
                     </div>
                 )}
 
-                {/* ──────────────── TAB: VOTING ──────────────── */}
-                {activeTab === "voting" && (
+                {/* ──────────────── TAB: STUDENTS ──────────────── */}
+                {activeTab === "students" && (
                     <div>
-                        <VotingConsole
-                            categories={voteCategories}
-                            candidates={voteCandidates}
-                            payments={votePayments}
-                            loading={loadingVoting}
-                            uploading={uploading}
-                            onRefresh={() => {
-                                const token = sessionStorage.getItem("admin_token");
-                                if (token) loadVotingData(token);
-                            }}
-                            onSubmitCategory={submitCategory}
-                            onSubmitCandidate={submitCandidate}
-                            onDeleteCategory={deleteCategory}
-                            onDeleteCandidate={deleteCandidate}
-                            onEditCategory={(cat: any) => {
-                                setEditingCategory(cat);
-                                setCategoryForm({
-                                    name: cat.name,
-                                    slug: cat.slug,
-                                    description: cat.description || "",
-                                    color: cat.color || "#0066ff",
-                                    active: cat.active,
-                                });
-                            }}
-                            onEditCandidate={(cand: any) => {
-                                setEditingCandidate(cand);
-                                setCandidateForm({
-                                    name: cand.name,
-                                    code: cand.code,
-                                    categoryId: cand.categoryId,
-                                    image: cand.image || "",
-                                    bio: cand.bio || "",
-                                    active: cand.active,
-                                });
-                            }}
-                            onCancelEdit={() => {
-                                setEditingCategory(null);
-                                setEditingCandidate(null);
-                                setCategoryForm({ name: "", slug: "", description: "", color: "#0066ff", active: true });
-                                setCandidateForm({ name: "", code: "", categoryId: "", image: "", bio: "", active: true });
-                            }}
-                            onUploadImage={handleImageUpload}
-                            categoryForm={categoryForm}
-                            setCategoryForm={setCategoryForm}
-                            candidateForm={candidateForm}
-                            setCandidateForm={setCandidateForm}
-                            editingCategory={editingCategory}
-                            editingCandidate={editingCandidate}
-                        />
+                        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+                            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+                                <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                                    <Users className="w-4 h-4 text-[#e8a020]" />
+                                    Registered Students
+                                </h3>
+                                <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-bold">
+                                    {students.length}
+                                </span>
+                            </div>
+
+                            {loadingStudents ? (
+                                <div className="p-8 text-center text-gray-400">Loading students...</div>
+                            ) : students.length === 0 ? (
+                                <div className="p-12 text-center text-gray-400">
+                                    <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
+                                        <Users className="w-6 h-6 text-gray-300" />
+                                    </div>
+                                    <p className="text-sm">No students registered yet.</p>
+                                </div>
+                            ) : (
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-sm">
+                                        <thead className="bg-gray-50 border-b border-gray-100">
+                                            <tr>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Name</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Email</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">School</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Form</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Joined</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Courses</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-100">
+                                            {students.map((student) => (
+                                                <tr key={student.id} className="hover:bg-gray-50 transition-colors">
+                                                    <td className="px-4 py-3">
+                                                        <div className="font-medium text-gray-900">
+                                                            {student.full_name || `${student.first_name || ''} ${student.last_name || ''}`.trim() || 'N/A'}
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-4 py-3 text-gray-600 font-mono text-xs">{student.email}</td>
+                                                    <td className="px-4 py-3 text-gray-700">{student.school || '-'}</td>
+                                                    <td className="px-4 py-3">{student.form || '-'}</td>
+                                                    <td className="px-4 py-3 text-gray-500 text-xs">
+                                                        {student.created_at ? new Date(student.created_at).toLocaleDateString() : '-'}
+                                                    </td>
+                                                    <td className="px-4 py-3">
+                                                        <div className="flex flex-wrap gap-1">
+                                                            {student.enrolled_courses && student.enrolled_courses.length > 0 ? (
+                                                                student.enrolled_courses.slice(0, 3).map((course: string) => (
+                                                                    <span key={course} className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">
+                                                                        {course}
+                                                                    </span>
+                                                                ))
+                                                            ) : (
+                                                                <span className="text-xs text-gray-400">None</span>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 )}
             </div>

@@ -142,7 +142,7 @@ export default function NewPostPage() {
                     <Link href="/admin" className="text-gray-400 hover:text-white">
                         <ArrowLeft className="w-4 h-4" />
                     </Link>
-                    <TrendingUp className="w-4 h-4 text-[#e8a020]" />
+                    <span className="text-[#c41e3a] w-4 h-4 rounded-md flex items-center justify-center text-white font-bold text-[10px]">T</span>
                     <span className="font-display text-sm font-semibold">New Post</span>
                 </div>
                 <div className="flex gap-2">
