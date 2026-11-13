@@ -2,6 +2,6 @@
 export function normalizePhone(phone: string) {
     return phone || null;
 }
-export function detectNetwork(_phone?: string) {
+export function detectNetwork(_phone?: string): "safaricom" | "airtel" | "other" {
     return "other";
 }
