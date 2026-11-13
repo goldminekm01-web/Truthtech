@@ -1,5 +1,5 @@
 // Minimal stub so the build passes. Voting/MPesa wiring was removed from lib/.
-export async function saveVotePayment() {
+export async function saveVotePayment(_payment?: any) {
     return null;
 }
 export async function getVotePayment(_id?: string) {
@@ -17,6 +17,6 @@ export function getCandidateById() {
 export async function getExistingCodes() {
     return [];
 }
-export async function recordVotesFromPayment() {
+export async function recordVotesFromPayment(_payment?: any) {
     return null;
 }
