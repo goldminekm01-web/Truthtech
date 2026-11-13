@@ -2,6 +2,6 @@
 export function normalizePhone(phone: string) {
     return phone || null;
 }
-export function detectNetwork() {
+export function detectNetwork(_phone?: string) {
     return "other";
 }
