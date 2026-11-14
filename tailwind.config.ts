@@ -38,6 +38,7 @@ const config: Config = {
             },
             fontFamily: {
                 sans: ["Inter", "system-ui", "sans-serif"],
+                serif: ['"Cheltenham"', '"Georgia Pro"', "Georgia", "serif"],
                 display: ['"Space Grotesk"', "Inter", "sans-serif"],
                 mono: ['"JetBrains Mono"', "monospace"],
             },
