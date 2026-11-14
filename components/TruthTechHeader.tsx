@@ -5,13 +5,18 @@ import Link from "next/link";
 import { Search, Menu, X, ChevronDown } from "lucide-react";
 
 const NAV_LINKS = [
-    { label: "Markets", href: "/category/markets" },
-    { label: "Economy", href: "/category/economy" },
-    { label: "Analysis", href: "/category/analysis" },
+    { label: "World", href: "/category/world" },
+    { label: "U.S.", href: "/category/us" },
+    { label: "Politics", href: "/category/politics" },
+    { label: "Business", href: "/category/business" },
     { label: "Opinion", href: "/category/opinion" },
-    { label: "Trading", href: "/category/trading" },
-    { label: "Crypto", href: "/category/crypto" },
-    { label: "About", href: "/about" },
+    { label: "Tech", href: "/category/tech" },
+    { label: "Science", href: "/category/science" },
+    { label: "Health", href: "/category/health" },
+    { label: "Arts", href: "/category/arts" },
+    { label: "Style", href: "/category/style" },
+    { label: "Food", href: "/category/food" },
+    { label: "Travel", href: "/category/travel" },
 ];
 
 const MORE_LINKS = [
@@ -81,21 +86,18 @@ export default function TruthTechHeader() {
                             className="flex items-center gap-2 shrink-0 group"
                             aria-label="TruthTech — Home"
                         >
-                            <div className="flex items-center justify-center w-8 h-8 bg-[#0b0b0c] rounded-md">
-                                <span className="text-white text-xs font-bold">T</span>
-                            </div>
-                            <span className="font-display font-bold text-xl text-[#0b0b0c] tracking-tight">
+                            <span className="font-serif font-bold text-xl text-[#0b0b0c] tracking-tight italic">
                                 Truth<span className="text-[#c41e3a]">Tech</span>
                             </span>
                         </Link>
 
                         {/* Desktop Nav */}
-                        <nav className="hidden lg:flex items-center gap-1" aria-label="Primary navigation">
+                        <nav className="hidden lg:flex items-center gap-6" aria-label="Primary navigation">
                             {NAV_LINKS.map((link) => (
                                 <Link
                                     key={link.href}
                                     href={link.href}
-                                    className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-[#0b0b0c] hover:bg-gray-50 rounded-md transition-colors"
+                                    className="text-xs font-medium text-[#0b0b0c]/80 hover:text-[#c41e3a] transition-colors uppercase tracking-wide"
                                 >
                                     {link.label}
                                 </Link>

@@ -55,7 +55,9 @@ export default async function HomePage() {
                     <div className="flex items-center justify-between mb-6">
                         <div className="flex items-center gap-3">
                             <div className="w-1 h-6 rounded-full bg-[#e8a020]" aria-hidden />
-                            <h2 className="font-display font-bold text-xl text-gray-900">Latest News</h2>
+                            <h2 className="font-serif font-bold text-xl text-[#0b0b0c] tracking-tight italic uppercase">
+                                Latest News
+                            </h2>
                         </div>
                         <Link
                             href="/category/markets"

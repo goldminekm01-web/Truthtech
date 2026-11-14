@@ -40,11 +40,11 @@ export default function TruthTechHero({ leadPost, secondaryPosts }: HeroProps) {
                                         {leadPost.categories[0]}
                                     </span>
                                 )}
-                                <h1 className="font-display text-white text-2xl sm:text-3xl lg:text-4xl font-bold leading-tight mb-3 group-hover:text-gray-200 transition-colors">
+                                <h1 className="font-serif font-bold text-2xl sm:text-3xl lg:text-4xl font-bold leading-tight mb-3 group-hover:text-gray-200 transition-colors">
                                     {leadPost.title}
                                 </h1>
                                 {leadPost.deck && (
-                                    <p className="text-gray-300 text-sm sm:text-base leading-relaxed mb-4 line-clamp-2 hidden sm:block">
+                                    <p className="font-serif text-gray-300 text-sm sm:text-base leading-relaxed mb-4 line-clamp-2 hidden sm:block">
                                         {leadPost.deck}
                                     </p>
                                 )}
@@ -84,7 +84,7 @@ export default function TruthTechHero({ leadPost, secondaryPosts }: HeroProps) {
                                             {post.categories[0]}
                                         </span>
                                     )}
-                                    <h2 className="font-display font-semibold text-sm sm:text-base leading-snug text-[#0b0b0c] group-hover:text-[#c41e3a] transition-colors line-clamp-3">
+                                    <h2 className="font-serif font-semibold text-sm sm:text-base leading-snug text-[#0b0b0c] group-hover:text-[#c41e3a] transition-colors line-clamp-3">
                                         {post.title}
                                     </h2>
                                     <p className="text-xs text-gray-400 mt-auto">
